@@ -1,3 +1,4 @@
 export default function Home() {
-  return <div className="text-3xl font-bold underline">Hello World</div>;
+  const userName = "John Doe";
+  return <div className="text-3xl font-bold underline">Hello {userName}</div>;
 }
