@@ -1,0 +1,23 @@
+# Top-most EditorConfig file
+root = true
+
+# Applies to all files
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 2
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# For Markdown files (keep whitespace)
+[*.md]
+trim_trailing_whitespace = false
+
+# For YAML / JSON files (2 spaces is standard)
+[*.{yml,yaml,json}]
+indent_size = 2
+
+# For Makefile (uses tabs)
+[Makefile]
+indent_style = tab
