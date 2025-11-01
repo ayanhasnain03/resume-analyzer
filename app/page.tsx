@@ -1,8 +1,7 @@
-export default function Home() {
-  const userName = "John Doe";
-  return (
-    <div className="text-3xl font-bold underline">
-      Hello {userName} change from develope
-    </div>
-  );
-}
+import React from "react";
+
+const page = () => {
+  return <div>page</div>;
+};
+
+export default page;
