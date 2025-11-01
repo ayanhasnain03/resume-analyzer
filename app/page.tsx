@@ -1,7 +1,16 @@
-import React from "react";
+"use client";
 
-const page = () => {
-  return <div>page</div>;
-};
+import { signOut, useSession } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
 
-export default page;
+export default function HomePage() {
+  const { data: session } = useSession();
+  if (!session) return <div>Not authenticated</div>;
+
+  return (
+    <div>
+      <Button onClick={() => signOut()}>Sign Out</Button>
+      <pre>{JSON.stringify(session, null, 2)}</pre>
+    </div>
+  );
+}
