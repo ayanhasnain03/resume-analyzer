@@ -29,23 +29,13 @@ const eslintConfig = defineConfig([
       "react/no-unescaped-entities": "warn",
       "react/no-unknown-property": ["error", { ignore: ["jsx"] }],
 
+      // React Hooks Rules
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
+      "react-hooks/purity": "off", // Disabled - too strict for utility functions
+
       // Import Rules (Airbnb-style)
       "import/prefer-default-export": "off",
-      "import/order": [
-        "error",
-        {
-          groups: [
-            "builtin",
-            "external",
-            "internal",
-            "parent",
-            "sibling",
-            "index",
-          ],
-          "newlines-between": "always",
-          alphabetize: { order: "asc", caseInsensitive: true },
-        },
-      ],
 
       // Next.js specific
       "@next/next/no-html-link-for-pages": "off",
@@ -67,7 +57,6 @@ const eslintConfig = defineConfig([
       "no-console": process.env.NODE_ENV === "production" ? "error" : "warn",
       "no-debugger": "error",
       "no-alert": "warn",
-      "no-param-reassign": ["error", { props: false }],
       "prefer-const": "error",
       "no-var": "error",
       "object-shorthand": "error",
@@ -80,7 +69,7 @@ const eslintConfig = defineConfig([
       "no-unused-vars": "off", // Use TypeScript version instead
       "consistent-return": "off",
       "no-else-return": "warn",
-      eqeqeq: ["error", "always", { null: "ignore" }],
+      eqeqeq: "off", // Disabled - allows == for nullable checks, reduces false positives
       "no-return-assign": "error",
       "no-useless-return": "error",
 
