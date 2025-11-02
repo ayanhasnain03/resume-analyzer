@@ -1,16 +1,26 @@
-"use client";
-
-import { signOut, useSession } from "@/lib/auth-client";
-import { Button } from "@/components/ui/button";
-
-export default function HomePage() {
-  const { data: session } = useSession();
-  if (!session) return <div>Not authenticated</div>;
-
+import {
+  HomeView,
+  HomeViewError,
+  HomeViewLoading,
+} from "@/modules/home/ui/views/home-view";
+import { getQueryClient, trpc } from "@/trpc/server";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { Suspense } from "react";
+import { ErrorBoundary } from "react-error-boundary";
+export default async function HomePage() {
+  const queryClient = getQueryClient();
+  void queryClient.prefetchQuery(
+    trpc.hello.queryOptions({
+      text: "Ayan",
+    })
+  );
   return (
-    <div>
-      <Button onClick={() => signOut()}>Sign Out</Button>
-      <pre>{JSON.stringify(session, null, 2)}</pre>
-    </div>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <Suspense fallback={<HomeViewLoading />}>
+        <ErrorBoundary fallback={<HomeViewError />}>
+          <HomeView />
+        </ErrorBoundary>
+      </Suspense>
+    </HydrationBoundary>
   );
 }
