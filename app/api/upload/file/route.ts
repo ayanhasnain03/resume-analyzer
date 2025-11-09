@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const fileName = `${randomId}${extName}`;
 
     const storageZone = process.env.BUNNY_STORAGE_ZONE;
-    const apiKey = "d6121d88-2677-407a-bffce19bfe16-42c3-4ca9";
+    const apiKey = process.env.BUNNY_API_KEY;
     const pullZoneUrl =
       process.env.BUNNY_PULL_ZONE_URL || "https://talentra.b-cdn.net";
     console.log(storageZone, apiKey, pullZoneUrl);
