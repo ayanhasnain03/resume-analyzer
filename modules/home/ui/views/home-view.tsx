@@ -6,7 +6,7 @@ export const HomeView = () => {
   const trpc = useTRPC();
   const { data } = useSuspenseQuery(
     trpc.hello.queryOptions({
-      text: "ayan",
+      email: "ayanhasnain@gmail.com",
     })
   );
   return (
