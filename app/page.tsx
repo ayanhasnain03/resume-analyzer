@@ -1,16 +1,9 @@
-"use client";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
-import { signOut, useSession } from "@/lib/auth-client";
-import { Button } from "@/components/ui/button";
-
-export default function HomePage() {
-  const { data: session } = useSession();
-  if (!session) return <div>Not authenticated</div>;
-
-  return (
-    <div>
-      <Button onClick={() => signOut()}>Sign Out</Button>
-      <pre>{JSON.stringify(session, null, 2)}</pre>
-    </div>
-  );
+export default async function HomePage() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  return <pre>{JSON.stringify(session, null, 2)}</pre>;
 }

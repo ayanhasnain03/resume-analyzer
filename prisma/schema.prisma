@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client"
   output   = "../lib/generated/prisma"
@@ -10,22 +9,31 @@ datasource db {
 }
 
 model User {
-  id            String    @id
+  id            String         @id @default(uuid())
   name          String
   email         String
-  emailVerified Boolean   @default(false)
+  emailVerified Boolean        @default(false)
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt
+  linkdinUrl    String?
+  portfolio     String?
+  github        String?
+  role          UserRole       @default(USER)
+  resume        Json?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now()) @updatedAt
   sessions      Session[]
   accounts      Account[]
+  jobOpenings   JobOpening[]
+  JobApplicants JobApplicant[]
 
   @@unique([email])
+  @@index([name])
+  @@index([name, emailVerified])
   @@map("user")
 }
 
 model Session {
-  id        String   @id
+  id        String   @id @default(uuid())
   expiresAt DateTime
   token     String
   createdAt DateTime @default(now())
@@ -36,11 +44,13 @@ model Session {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([token])
+  @@index([userId])
+  @@index([expiresAt])
   @@map("session")
 }
 
 model Account {
-  id                    String    @id
+  id                    String    @id @default(uuid())
   accountId             String
   providerId            String
   userId                String
@@ -53,18 +63,114 @@ model Account {
   scope                 String?
   password              String?
   createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  updatedAt             DateTime  @default(now()) @updatedAt
 
+  @@index([userId])
+  @@index([providerId, accountId])
   @@map("account")
 }
 
 model Verification {
-  id         String   @id
+  id         String   @id @default(uuid())
   identifier String
   value      String
   expiresAt  DateTime
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now()) @updatedAt
 
+  @@index([identifier])
+  @@index([expiresAt])
   @@map("verification")
+}
+
+model JobOpening {
+  id                   String             @id @default(uuid())
+  title                String
+  about                String
+  companyName          String?
+  companyAddress       String?
+  companyLogo          String?
+  aboutCompany         String?
+  companySize          String?
+  companyWebsite       String?
+  filteringDescription String?
+  department           String
+  requiredSkills       Json               @default("[]")
+  location             JobOpeningLocation @default(OFFICE)
+  experienceLevel      String
+  status               JobOpeningStatus   @default(ACTIVE)
+  salaryRange          Json?
+  jobType              JobType            @default(FULL_TIME)
+  currency             Currency           @default(USD)
+  currencySymbol       String             @default("$")
+  interviewQuestions   Json?              @default("[]")
+  postedBy             String
+  user                 User               @relation(fields: [postedBy], references: [id], onDelete: Cascade)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @default(now()) @updatedAt
+  JobApplicants        JobApplicant[]
+
+  @@index([title])
+  @@index([department, location, experienceLevel])
+  @@index([postedBy])
+  @@map("job_opening")
+}
+
+enum Currency {
+  USD
+  EUR
+  GBP
+  INR
+  CAD
+  AUD
+  NZD
+}
+
+enum JobOpeningStatus {
+  ACTIVE
+  INACTIVE
+  CLOSED
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  TEMPORARY
+}
+
+model JobApplicant {
+  id             String             @id @default(uuid())
+  resume         String
+  feedbackResume Json
+  status         JobApplicantStatus @default(PENDING)
+  jobOpeningId   String
+  userId         String
+  JobOpening     JobOpening         @relation(fields: [jobOpeningId], references: [id])
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @default(now()) @updatedAt
+
+  @@index([jobOpeningId])
+  @@index([userId])
+  @@index([status])
+  @@map("job_applicant")
+}
+
+enum JobApplicantStatus {
+  SELECTED
+  REJECTED
+  PENDING
+}
+
+enum JobOpeningLocation {
+  OFFICE
+  REMOTE
+  HYBRID
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  RECUITER
 }
