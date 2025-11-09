@@ -1,19 +1,5 @@
-"use client";
-import { useTRPC } from "@/trpc/client";
-import { useSuspenseQuery } from "@tanstack/react-query";
-
 export const HomeView = () => {
-  const trpc = useTRPC();
-  const { data } = useSuspenseQuery(
-    trpc.hello.queryOptions({
-      text: "ayan",
-    })
-  );
-  return (
-    <div className="">
-      <pre>{JSON.stringify(data, null, 2)}</pre>
-    </div>
-  );
+  return <div className=""></div>;
 };
 export const HomeViewLoading = () => {
   return <h1>Loading...</h1>;
