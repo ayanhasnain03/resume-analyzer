@@ -47,6 +47,7 @@ import { useTRPC } from "@/trpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 const CURRENCY_SYMBOLS: Record<CurrencyEnum, string> = {
   [CurrencyEnum.USD]: "$",
@@ -107,15 +108,17 @@ const formatSalary = (value: string | number): string => {
 };
 
 export const DashboardJobsCreateView = () => {
+  const router = useRouter();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [logoFile, setLogoFile] = React.useState<File | undefined>(undefined);
   const [isUploadingLogo, setIsUploadingLogo] = React.useState(false);
   const createJobOpeningMutation = useMutation(
     trpc.recuiter.create.mutationOptions({
-      onSuccess: () => {
+      onSuccess: (data) => {
         queryClient.invalidateQueries(trpc.recuiter.getMany.queryOptions({}));
         toast.success("Job opening created successfully");
+        router.push(`/dashboard/jobs/${data.id}/interview-manage`);
       },
       onError: () => {
         toast.error("Failed to create job opening");
@@ -136,7 +139,6 @@ export const DashboardJobsCreateView = () => {
         aboutCompany: "",
         companySize: "",
         companyWebsite: "",
-        filteringDescription: "",
         department: "",
         location: "" as JobOpeningLocation,
         experienceLevel: "",
@@ -707,37 +709,6 @@ export const DashboardJobsCreateView = () => {
                       />
                       <FieldDescription>
                         Select or create the required skills for this position
-                      </FieldDescription>
-                      {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
-                      )}
-                    </Field>
-                  );
-                }}
-              </form.Field>
-
-              <form.Field name="filteringDescription">
-                {(field) => {
-                  const isInvalid =
-                    (field.state.meta.isTouched || form.state.isSubmitted) &&
-                    !field.state.meta.isValid;
-                  return (
-                    <Field data-invalid={isInvalid}>
-                      <FieldLabel htmlFor={field.name}>
-                        Filtering Description
-                      </FieldLabel>
-                      <Textarea
-                        id={field.name}
-                        name={field.name}
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        placeholder="Enter additional description used for filtering and matching candidates..."
-                        rows={6}
-                      />
-                      <FieldDescription>
-                        Additional description used for filtering and matching
-                        candidates
                       </FieldDescription>
                       {isInvalid && (
                         <FieldError errors={field.state.meta.errors} />

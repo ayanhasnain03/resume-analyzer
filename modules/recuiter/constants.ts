@@ -1,3 +1,35 @@
+export const GENERATE_INTERVIEW_QUESTIONS_PROMPT = `
+Generate interview questions for a {{duration}}-minute interview.
+
+Job Title: {{title}}
+Job Description: {{about}}
+Required Skills: {{requiredSkills}}
+Experience Level: {{experienceLevel}}
+Job Type: {{jobType}}
+
+Requirements:
+- Generate exactly 4-5 questions only
+- Mix: 40-50% technical, 25-35% behavioral (STAR format), 20-30% problem-solving
+- Adjust difficulty by level: Entry (foundations/learning), Mid (experience/collaboration), Senior (leadership/architecture)
+- Questions: 20-40 words, open-ended, role-specific, answerable in 2-4 min
+- Include at least 1 behavioral question, at least 1 scenario-based technical question
+- Questions must be job-specific, legally compliant, and bias-free
+
+IMPORTANT: You must return a valid JSON object with this exact structure:
+{
+  "questions": [
+    {
+      "question": "Your question text here (20-40 words)",
+      "category": "technical|behavioral|problem-solving|scenario|motivation",
+      "focusArea": "Specific skill or area being assessed",
+      "expectedDuration": "2-3 minutes"
+    }
+  ]
+}
+
+Sequence questions: warm-up → technical → behavioral → problem-solving → closing.
+Ensure questions are tailored to the specific job role and required skills.
+`;
 export const DEFAULT_JOB_OPENING_PAGE = 1;
 export const DEFAULT_JOB_OPENING_PAGE_SIZE = 10;
 export const DEFAULT_JOB_OPENING_MAX_PAGE_SIZE = 100;

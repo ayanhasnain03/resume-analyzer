@@ -1,5 +1,11 @@
 import { Currency, JobType } from "@/lib/generated/prisma/enums";
 import { z } from "zod";
+export const scheduleInterviewInput = z.object({
+  jobOpeningId: z.string().min(1, "Job opening id is required"),
+  questions: z.array(z.string()).min(1, "Questions are required").optional(),
+  duration: z.number().min(1, "Duration is required"),
+  expiresAt: z.date().optional(),
+});
 
 export const createJobOpeningInput = z.object({
   title: z.string().min(6, "Title too short, at least 6 letters."),
@@ -15,7 +21,6 @@ export const createJobOpeningInput = z.object({
   aboutCompany: z.string().min(1, "About company is required"),
   companySize: z.string().min(1, "Company size is required"),
   companyWebsite: z.string().min(1, "Company website is required"),
-  filteringDescription: z.string().min(1, "Filtering description is required"),
   department: z.string().min(1, "Department is required"),
   location: z.enum(["REMOTE", "OFFICE", "HYBRID"], "Location is required"),
   experienceLevel: z.string().min(1, "Add Experience"),
@@ -51,3 +56,4 @@ export const createJobOpeningInput = z.object({
 });
 
 export type CreateJobOpeningInput = z.infer<typeof createJobOpeningInput>;
+export type ScheduleInterviewInput = z.infer<typeof scheduleInterviewInput>;

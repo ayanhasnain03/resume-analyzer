@@ -13,37 +13,74 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Upload, X } from "lucide-react";
-import { useForm } from "@tanstack/react-form";
+import { FormValidateOrFn, useForm } from "@tanstack/react-form";
 import { resumeFormSchema } from "../../form-schema";
 import { toast } from "sonner";
+import { useTRPC } from "@/trpc/client";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { JobOpening } from "@/lib/generated/prisma/client";
+import { htmlToText } from "html-to-text";
+import { useState } from "react";
+import { useSession } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
 
-export const ResumeAnalyzeView = () => {
+export const ResumeAnalyzeView = ({ jobId }: { jobId: string }) => {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const trpc = useTRPC();
+  const { data } = useSuspenseQuery(
+    trpc.jobs.getJobOpening.queryOptions({ jobOpeningId: jobId })
+  );
+  const jobData = data as unknown as JobOpening;
+  const jobTitle = jobData?.title ?? "";
+  const jobDescription = htmlToText(jobData?.about ?? "");
+
   const form = useForm({
-    defaultValues: {
-      jobTitle: "",
-      jobDescription: "",
-      file: undefined as unknown as File,
+    defaultState: {
+      values: {
+        file: undefined as File | undefined,
+        jobTitle,
+        jobDescription,
+        userId: (session?.session?.userId ?? "") as string,
+        jobOpeningId: jobId,
+      },
     },
     validators: {
-      onSubmit: resumeFormSchema,
+      onSubmit: resumeFormSchema as FormValidateOrFn<{
+        file: File | undefined;
+        jobTitle: string;
+        jobDescription: string;
+        userId: string;
+        jobOpeningId: string;
+      }>,
     },
     onSubmit: async ({ value }) => {
-      try {
-        // Convert File to base64
-        const arrayBuffer = await value.file.arrayBuffer();
-        // Use chunks to avoid stack overflow with large files
-        const bytes = new Uint8Array(arrayBuffer);
-        let binary = "";
-        const chunkSize = 8192;
-        for (let i = 0; i < bytes.length; i += chunkSize) {
-          const chunk = bytes.subarray(i, i + chunkSize);
-          binary += String.fromCharCode.apply(null, Array.from(chunk));
-        }
-        const base64 = btoa(binary);
+      if (!value.file) {
+        toast.error("Please select a file");
+        return;
+      }
 
+      setIsLoading(true);
+      try {
+        // Convert file to base64
+        const file = value.file;
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            // Remove data URL prefix if present
+            const base64String = result.includes(",")
+              ? result.split(",")[1]
+              : result;
+            resolve(base64String);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        // Call analyze API
         const response = await fetch("/api/resume/analyze", {
           method: "POST",
           headers: {
@@ -51,26 +88,33 @@ export const ResumeAnalyzeView = () => {
           },
           body: JSON.stringify({
             file: base64,
-            fileName: value.file.name,
             jobTitle: value.jobTitle,
             jobDescription: value.jobDescription,
+            userId: value.userId,
+            jobOpeningId: value.jobOpeningId,
           }),
         });
 
         if (!response.ok) {
-          const error = await response.json();
+          const error = await response.json().catch(() => ({
+            error: `HTTP ${response.status}: ${response.statusText}`,
+          }));
           throw new Error(error.error || "Failed to analyze resume");
         }
 
         const result = await response.json();
-        console.log(result);
+        if (result.success) {
+          toast.success("Application submitted successfully!");
+          router.push(`/jobs/${jobId}`);
+        } else {
+          throw new Error(result.error || "Analysis failed");
+        }
       } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "An error occurred while analyzing your resume"
-        );
-        throw error;
+        const errorMessage =
+          error instanceof Error ? error.message : "Failed to analyze resume";
+        toast.error(errorMessage);
+      } finally {
+        setIsLoading(false);
       }
     },
   });
@@ -92,60 +136,11 @@ export const ResumeAnalyzeView = () => {
         }}
       >
         <FieldGroup>
-          {/* Job Title Field */}
-          <form.Field name="jobTitle">
-            {(field) => {
-              const isInvalid =
-                field.state.meta.isTouched && !field.state.meta.isValid;
-              return (
-                <Field data-invalid={isInvalid}>
-                  <FieldLabel htmlFor={field.name}>Job Title</FieldLabel>
-                  <Input
-                    id={field.name}
-                    name={field.name}
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="e.g., Senior Software Engineer"
-                    aria-invalid={isInvalid}
-                    autoComplete="off"
-                  />
-                  {isInvalid && <FieldError errors={field.state.meta.errors} />}
-                </Field>
-              );
-            }}
-          </form.Field>
-
-          {/* Job Description Field */}
-          <form.Field name="jobDescription">
-            {(field) => {
-              const isInvalid =
-                field.state.meta.isTouched && !field.state.meta.isValid;
-              return (
-                <Field data-invalid={isInvalid}>
-                  <FieldLabel htmlFor={field.name}>Job Description</FieldLabel>
-                  <Textarea
-                    id={field.name}
-                    name={field.name}
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="Paste the job description here..."
-                    rows={6}
-                    className="min-h-24 resize-none"
-                    aria-invalid={isInvalid}
-                  />
-                  {isInvalid && <FieldError errors={field.state.meta.errors} />}
-                </Field>
-              );
-            }}
-          </form.Field>
-
-          {/* File Upload Field */}
           <form.Field name="file">
             {(field) => {
               const isInvalid =
-                field.state.meta.isTouched && !field.state.meta.isValid;
+                (field.state.meta.isTouched || form.state.isSubmitted) &&
+                !field.state.meta.isValid;
               return (
                 <Field data-invalid={isInvalid}>
                   <FieldLabel>Resume (PDF)</FieldLabel>
@@ -171,7 +166,7 @@ export const ResumeAnalyzeView = () => {
                     <DropzoneEmptyState />
                     <DropzoneContent
                       onRemove={() => {
-                        field.handleChange(undefined as unknown as File);
+                        field.handleChange(undefined);
                       }}
                     />
                   </Dropzone>
@@ -193,7 +188,7 @@ export const ResumeAnalyzeView = () => {
                             size="sm"
                             variant="ghost"
                             onClick={() => {
-                              field.handleChange(undefined as unknown as File);
+                              field.handleChange(undefined);
                             }}
                             className="h-8 w-8 p-0"
                           >
@@ -211,31 +206,21 @@ export const ResumeAnalyzeView = () => {
           </form.Field>
         </FieldGroup>
 
-        {/* Submit Button */}
-        <form.Subscribe
-          selector={(state) => ({
-            canSubmit: state.canSubmit,
-            isSubmitting: state.isSubmitting,
-          })}
+        <Button
+          type="submit"
+          disabled={isLoading}
+          className="w-full cursor-pointer"
+          size="lg"
         >
-          {({ canSubmit, isSubmitting }) => (
-            <Button
-              type="submit"
-              disabled={!canSubmit}
-              className="w-full"
-              size="lg"
-            >
-              {isSubmitting ? (
-                <>Analyzing...</>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Analyze Resume
-                </>
-              )}
-            </Button>
+          {isLoading ? (
+            <>Analyzing...</>
+          ) : (
+            <>
+              <Upload className="mr-2 h-4 w-4" />
+              Analyze Resume
+            </>
           )}
-        </form.Subscribe>
+        </Button>
       </form>
     </div>
   );

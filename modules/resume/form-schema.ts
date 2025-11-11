@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 
 export const resumeFormSchema = z.object({
   jobTitle: z.string().min(1, { message: "Job title is required" }),
@@ -13,6 +13,8 @@ export const resumeFormSchema = z.object({
     .refine((value) => value.type === "application/pdf", {
       message: "File must be a PDF",
     }),
+  userId: z.string().min(1, { message: "User ID is required" }),
+  jobOpeningId: z.string().min(1, { message: "Job opening ID is required" }),
 });
 
 export type ResumeFormSchema = z.infer<typeof resumeFormSchema>;

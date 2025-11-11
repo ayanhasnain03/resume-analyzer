@@ -2,13 +2,17 @@ import { inngest } from "@/inngest/client";
 import OpenAI from "openai";
 import { prepareInstructions } from "@/modules/resume/constants";
 import { extractText } from "@/lib/extract-text";
-
+import db from "@/lib/db";
+import {
+  InterviewStatus,
+  JobApplicantStatus,
+} from "@/lib/generated/prisma/enums";
+import { JsonObject } from "@prisma/client/runtime/library";
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Core function that can be called directly or through Inngest
-export async function analyzeResume({
+async function analyzeResume({
   resumeText,
   jobTitle,
   jobDescription,
@@ -17,7 +21,6 @@ export async function analyzeResume({
   jobTitle: string;
   jobDescription: string;
 }) {
-  // Truncate resume text if too long (limit to ~4000 chars for faster processing)
   const truncatedResumeText =
     resumeText.length > 4000
       ? `${resumeText.substring(0, 4000)}...[truncated]`
@@ -39,14 +42,12 @@ export async function analyzeResume({
       },
     ],
     response_format: { type: "json_object" },
-    temperature: 0, // Faster, deterministic responses
-    max_tokens: 2000, // Limit response size for faster generation
+    temperature: 0,
+    max_tokens: 2000,
   });
 
   const content = response.choices[0]?.message?.content;
-  if (!content) {
-    throw new Error("No content found in OpenAI response");
-  }
+  if (!content) throw new Error("No content found in OpenAI response");
 
   const parsedFeedback = JSON.parse(content);
 
@@ -67,17 +68,17 @@ export async function analyzeResume({
 }
 
 export const resumeAnalyze = inngest.createFunction(
-  {
-    id: "user/resume-analyze",
-  },
-  {
-    event: "user/resume-analyze",
-  },
+  { id: "user/resume-analyze" },
+  { event: "user.resume-analyze" },
   async ({ event, step }) => {
     const { file, jobTitle, jobDescription } = event.data;
+
+    // 1️⃣ Extract text
     const resumeText = await step.run("extract-resume-text", async () => {
       return await extractText(file);
     });
+
+    // 2️⃣ Generate feedback
     const generateFeedback = await step.run("generate-feedback", async () => {
       return await analyzeResume({
         resumeText,
@@ -85,6 +86,40 @@ export const resumeAnalyze = inngest.createFunction(
         jobDescription,
       });
     });
-    return generateFeedback.data;
+
+    await step.run("save-feedback-to-db", async () => {
+      const jobApplicant = await db.jobApplicant.create({
+        data: {
+          resume: resumeText,
+          feedbackResume: generateFeedback.data.feedback,
+          status: JobApplicantStatus.PENDING,
+          jobOpeningId: event.data.jobOpeningId,
+          userId: event.data.userId,
+        },
+      });
+      const feedbackData = jobApplicant.feedbackResume as JsonObject;
+      const overallScore = feedbackData?.overallScore as number | undefined;
+
+      if (overallScore && overallScore >= 40) {
+        await db.jobApplicant.update({
+          where: { id: jobApplicant.id },
+          data: { status: JobApplicantStatus.SELECTED },
+        });
+
+        await db.jobApplicantInterview.create({
+          data: {
+            jobApplicantId: jobApplicant.id,
+            jobOpeningId: jobApplicant.jobOpeningId,
+            status: InterviewStatus.PENDING,
+          },
+        });
+      } else {
+        await db.jobApplicant.update({
+          where: { id: jobApplicant.id },
+          data: { status: JobApplicantStatus.REJECTED },
+        });
+      }
+    });
+    return generateFeedback;
   }
 );

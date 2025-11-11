@@ -84,36 +84,89 @@ model Verification {
 }
 
 model JobOpening {
-  id                   String             @id @default(uuid())
-  title                String
-  about                String
-  companyName          String?
-  companyAddress       String?
-  companyLogo          String?
-  aboutCompany         String?
-  companySize          String?
-  companyWebsite       String?
-  filteringDescription String?
-  department           String
-  requiredSkills       Json               @default("[]")
-  location             JobOpeningLocation @default(OFFICE)
-  experienceLevel      String
-  status               JobOpeningStatus   @default(ACTIVE)
-  salaryRange          Json?
-  jobType              JobType            @default(FULL_TIME)
-  currency             Currency           @default(USD)
-  currencySymbol       String             @default("$")
-  interviewQuestions   Json?              @default("[]")
-  postedBy             String
-  user                 User               @relation(fields: [postedBy], references: [id], onDelete: Cascade)
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @default(now()) @updatedAt
-  JobApplicants        JobApplicant[]
+  id                     String                  @id @default(uuid())
+  title                  String
+  about                  String
+  companyName            String?
+  companyAddress         String?
+  companyLogo            String?
+  aboutCompany           String?
+  companySize            String?
+  companyWebsite         String?
+  department             String
+  requiredSkills         Json                    @default("[]")
+  location               JobOpeningLocation      @default(OFFICE)
+  experienceLevel        String
+  status                 JobOpeningStatus        @default(ACTIVE)
+  salaryRange            Json?
+  jobType                JobType                 @default(FULL_TIME)
+  currency               Currency                @default(USD)
+  currencySymbol         String                  @default("$")
+  postedBy               String
+  user                   User                    @relation(fields: [postedBy], references: [id], onDelete: Cascade)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @default(now()) @updatedAt
+  JobApplicants          JobApplicant[]
+  Interview              Interview[]
+  JobApplicantInterviews JobApplicantInterview[]
 
   @@index([title])
   @@index([department, location, experienceLevel])
   @@index([postedBy])
   @@map("job_opening")
+}
+
+model Interview {
+  id           String     @id @default(uuid())
+  questions    Json       @default("[]")
+  duration     Int        @default(5) // in minutes
+  expiresAt    DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @default(now()) @updatedAt
+  jobOpeningId String
+  jobOpening   JobOpening @relation(fields: [jobOpeningId], references: [id], onDelete: Cascade)
+
+  @@index([jobOpeningId])
+  @@map("interview")
+}
+
+model JobApplicant {
+  id                     String                  @id @default(uuid())
+  resume                 String
+  feedbackResume         Json
+  status                 JobApplicantStatus      @default(PENDING)
+  jobOpeningId           String
+  userId                 String
+  JobOpening             JobOpening              @relation(fields: [jobOpeningId], references: [id])
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @default(now()) @updatedAt
+  JobApplicantInterviews JobApplicantInterview[]
+
+  @@index([jobOpeningId])
+  @@index([userId])
+  @@index([status])
+  @@map("job_applicant")
+}
+
+model JobApplicantInterview {
+  id             String          @id @default(uuid())
+  jobApplicantId String
+  jobApplicant   JobApplicant    @relation(fields: [jobApplicantId], references: [id], onDelete: Cascade)
+  jobOpeningId   String
+  jobOpening     JobOpening      @relation(fields: [jobOpeningId], references: [id], onDelete: Cascade)
+  status         InterviewStatus @default(PENDING)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @default(now()) @updatedAt
+
+  @@index([jobApplicantId])
+  @@map("job_applicant_interview")
+}
+
+enum InterviewStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
 }
 
 enum Currency {
@@ -137,24 +190,6 @@ enum JobType {
   PART_TIME
   CONTRACT
   TEMPORARY
-}
-
-model JobApplicant {
-  id             String             @id @default(uuid())
-  resume         String
-  feedbackResume Json
-  status         JobApplicantStatus @default(PENDING)
-  jobOpeningId   String
-  userId         String
-  JobOpening     JobOpening         @relation(fields: [jobOpeningId], references: [id])
-  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @default(now()) @updatedAt
-
-  @@index([jobOpeningId])
-  @@index([userId])
-  @@index([status])
-  @@map("job_applicant")
 }
 
 enum JobApplicantStatus {

@@ -16,16 +16,22 @@ import {
   MapPin,
   Building2,
   Briefcase,
-  Calendar,
-  Edit,
-  Trash2,
   Users,
   DollarSign,
   TrendingUp,
-  Sparkles,
+  Clock,
+  EllipsisVertical,
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface DashboardJobCardProps {
   id: string;
@@ -47,6 +53,7 @@ interface DashboardJobCardProps {
   totalApplicants?: number;
   onEdit?: () => void;
   onDelete?: () => void;
+  onInterviewManagement?: () => void;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -120,7 +127,8 @@ export const DashboardJobCard = ({
   companyName,
   companyAddress: _companyAddress,
   salaryRange,
-  companySize: _companySize,
+  companySize,
+  onInterviewManagement,
 }: DashboardJobCardProps) => {
   const truncatedDescription =
     description.length > 150
@@ -129,69 +137,81 @@ export const DashboardJobCard = ({
 
   const logoUrl = getCompanyLogoUrl(companyLogo);
   const formattedSalary = formatSalary(salaryRange.min, salaryRange.max);
-  console.log(createdAt);
+
   return (
     <Card
       key={id}
-      className="group relative flex flex-col h-full overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-2 border border-border/40 bg-gradient-to-br from-background via-background to-muted/20 backdrop-blur-sm"
+      className="group relative flex flex-col h-full overflow-hidden transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 border border-border/60 bg-background"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/0 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      {/* Subtle hover accent */}
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
 
-      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <CardHeader className="pb-4 pt-5 px-5 relative z-10">
+        <div className="flex items-start gap-3.5 mb-3.5">
+          {logoUrl ? (
+            <div className="relative shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-background border border-border shadow-sm group-hover:border-primary/40 transition-all duration-200">
+              <Image
+                src={logoUrl}
+                alt={companyName || "Company logo"}
+                fill
+                className="object-cover"
+                sizes="56px"
+              />
+            </div>
+          ) : (
+            <div className="shrink-0 w-14 h-14 rounded-lg bg-muted/50 border border-border flex items-center justify-center group-hover:border-primary/40 transition-all duration-200">
+              <Building2 className="h-6 w-6 text-muted-foreground/70" />
+            </div>
+          )}
 
-      <CardHeader className="pb-1 pt-5 px-5 relative z-10">
-        <div className="flex items-start justify-between gap-4 mb-4">
-          <div className="flex items-start gap-4 flex-1 min-w-0">
-            {logoUrl ? (
-              <div className="relative shrink-0 w-14 h-14 rounded-xl overflow-hidden bg-background border border-border/60 shadow-sm group-hover:shadow-lg group-hover:border-primary/30 group-hover:scale-105 transition-all duration-300">
-                <Image
-                  src={logoUrl}
-                  alt={companyName || "Company logo"}
-                  fill
-                  className="object-cover"
-                  sizes="56px"
-                />
-              </div>
-            ) : (
-              <div className="shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-primary/15 via-primary/10 to-primary/5 border border-primary/20 flex items-center justify-center shadow-sm group-hover:shadow-lg group-hover:scale-105 transition-all duration-300">
-                <Building2 className="h-7 w-7 text-primary/70 group-hover:text-primary transition-colors duration-300" />
-              </div>
-            )}
-
-            {/* Title and Company Info */}
-            <div className="flex-1 min-w-0 space-y-1.5">
-              <CardTitle className="text-xl font-bold line-clamp-2 leading-tight group-hover:text-primary transition-colors duration-300">
-                {title}
-              </CardTitle>
+          {/* Title and Company Info */}
+          <div className="flex-1 min-w-0 space-y-2">
+            <CardTitle className="text-lg font-semibold line-clamp-2 leading-snug text-foreground">
+              {title}
+            </CardTitle>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
               {companyName && (
-                <p className="text-sm text-muted-foreground/80 truncate flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
                   <Building2 className="h-3.5 w-3.5 shrink-0" />
                   <span className="font-medium">{companyName}</span>
-                </p>
+                </div>
+              )}
+              {companySize && (
+                <>
+                  {companyName && (
+                    <span className="text-muted-foreground/40">•</span>
+                  )}
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Users className="h-3.5 w-3.5 shrink-0" />
+                    <span className="font-medium">{companySize}</span>
+                  </div>
+                </>
               )}
             </div>
           </div>
         </div>
-
-        {/* Status and Applicants Badges */}
+        .{/* Status and Applicants Badges */}
         <div className="flex items-center gap-2 flex-wrap">
           <Badge
             variant={getStatusVariant(status)}
             className={cn(
-              "text-xs font-semibold capitalize px-3 py-1 rounded-full shadow-sm transition-all duration-300",
+              "text-xs font-medium capitalize px-3 py-1 rounded-md",
               status.toLowerCase() === "active" &&
-                "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 group-hover:shadow-emerald-500/20",
+                "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800",
               status.toLowerCase() === "open" &&
-                "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30 group-hover:shadow-blue-500/20"
+                "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800",
+              status.toLowerCase() === "draft" &&
+                "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800",
+              status.toLowerCase() === "closed" &&
+                "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950 dark:text-gray-400 dark:border-gray-800"
             )}
           >
-            <Sparkles className="h-3 w-3 mr-1 inline-block" />
             {status}
           </Badge>
           {totalApplicants !== undefined && totalApplicants > 0 && (
             <Badge
               variant="outline"
-              className="text-xs font-semibold px-3 py-1 rounded-full border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors duration-300 shadow-sm"
+              className="text-xs font-medium px-3 py-1 rounded-md bg-background"
             >
               <Users className="h-3 w-3 mr-1.5" />
               {totalApplicants}{" "}
@@ -201,66 +221,68 @@ export const DashboardJobCard = ({
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 space-y-5 pb-5 px-5 relative z-10">
-        {/* Description with better styling */}
-        <CardDescription className="text-sm leading-relaxed line-clamp-3 text-muted-foreground/90">
+      <CardContent className="flex-1 space-y-4 pb-5 px-5 relative z-10">
+        {/* Description */}
+        <CardDescription className="text-sm leading-relaxed line-clamp-3 text-muted-foreground">
           {convertHtmlToText(truncatedDescription)}
         </CardDescription>
 
-        {/* Job Details Grid - More compact and modern */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="group/item flex items-center gap-2.5 text-sm px-3 py-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all duration-200">
-            <Building2 className="h-4 w-4 shrink-0 text-primary/60 group-hover/item:text-primary group-hover/item:scale-110 transition-all duration-200" />
-            <span className="truncate font-medium text-foreground/90">
+        {/* Job Details Grid */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-muted/50 border border-border/50">
+            <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="truncate font-medium text-foreground">
               {department}
             </span>
           </div>
 
-          <div className="group/item flex items-center gap-2.5 text-sm px-3 py-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all duration-200">
-            <MapPin className="h-4 w-4 shrink-0 text-primary/60 group-hover/item:text-primary group-hover/item:scale-110 transition-all duration-200" />
-            <span className="truncate text-foreground/90">{location}</span>
+          <div className="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-muted/50 border border-border/50">
+            <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="truncate font-medium text-foreground">
+              {location}
+            </span>
           </div>
 
-          <div className="group/item flex items-center gap-2.5 text-sm px-3 py-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all duration-200">
-            <Briefcase className="h-4 w-4 shrink-0 text-primary/60 group-hover/item:text-primary group-hover/item:scale-110 transition-all duration-200" />
-            <span className="truncate text-foreground/90">
+          <div className="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-muted/50 border border-border/50">
+            <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="truncate font-medium text-foreground">
               {experienceLevel}
             </span>
           </div>
 
           {formattedSalary && (
-            <div className="group/item flex items-center gap-2.5 text-sm px-3 py-2 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 hover:from-primary/15 hover:to-primary/10 border border-primary/20 transition-all duration-200">
-              <DollarSign className="h-4 w-4 shrink-0 text-primary group-hover/item:scale-110 transition-all duration-200" />
-              <span className="truncate font-bold text-primary">
+            <div className="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-primary/5 border border-primary/20">
+              <DollarSign className="h-4 w-4 shrink-0 text-primary" />
+              <span className="truncate font-semibold text-primary">
                 {formattedSalary}
               </span>
             </div>
           )}
         </div>
 
-        {/* Skills Section with enhanced design */}
+        {/* Skills Section */}
         {requiredSkills && requiredSkills.length > 0 && (
-          <div className="pt-3 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground/70 uppercase tracking-wider">
-              <TrendingUp className="h-3.5 w-3.5 text-primary/60" />
-              <span>Key Skills</span>
+          <div className="pt-2 space-y-2.5">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span>Required Skills</span>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {requiredSkills.slice(0, 5).map((skill, index) => (
+            <div className="flex flex-wrap gap-1.5">
+              {requiredSkills.slice(0, 6).map((skill, index) => (
                 <Badge
                   key={index}
                   variant="outline"
-                  className="text-xs font-medium px-3 py-1 rounded-full hover:bg-primary/10 hover:border-primary/50 hover:text-primary hover:scale-105 hover:shadow-sm transition-all duration-200 cursor-default"
+                  className="text-xs font-medium px-2.5 py-0.5 rounded-md bg-background"
                 >
                   {skill}
                 </Badge>
               ))}
-              {requiredSkills.length > 5 && (
+              {requiredSkills.length > 6 && (
                 <Badge
                   variant="outline"
-                  className="text-xs font-semibold px-3 py-1 rounded-full bg-muted/50 border-dashed hover:bg-muted transition-colors duration-200"
+                  className="text-xs font-medium px-2.5 py-0.5 rounded-md bg-muted/50"
                 >
-                  +{requiredSkills.length - 5}
+                  +{requiredSkills.length - 6}
                 </Badge>
               )}
             </div>
@@ -268,24 +290,26 @@ export const DashboardJobCard = ({
         )}
       </CardContent>
 
-      {/* Footer with glassmorphism effect */}
-      <CardFooter className="border-t border-border/50 bg-muted/20 backdrop-blur-sm pt-4 pb-4 px-5 mt-auto relative z-10">
-        <div className="flex items-center justify-between w-full text-xs">
-          <div className="flex items-center gap-2 text-muted-foreground/80 group-hover:text-muted-foreground transition-colors duration-300">
-            <Calendar className="h-3.5 w-3.5 shrink-0" />
+      {/* Footer */}
+      <CardFooter className="border-t border-border bg-muted/30 pt-4 pb-4 px-5 mt-auto relative z-10">
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="h-3.5 w-3.5 shrink-0" />
             <span className="font-medium">
               {createdAt
-                ? formatDistanceToNow(new Date(createdAt), { addSuffix: true })
+                ? formatDistanceToNow(new Date(createdAt), {
+                    addSuffix: true,
+                  })
                 : "N/A"}
             </span>
           </div>
           {totalApplicants !== undefined && (
             <div
               className={cn(
-                "flex items-center gap-2 font-bold px-3 py-1.5 rounded-full transition-all duration-300",
+                "flex items-center gap-1.5 font-semibold px-2.5 py-1 rounded-md text-xs",
                 totalApplicants > 0
-                  ? "text-primary bg-primary/10 shadow-sm"
-                  : "text-muted-foreground/70 bg-muted/30"
+                  ? "text-primary bg-primary/10 border border-primary/20"
+                  : "text-muted-foreground bg-muted/50 border border-border/50"
               )}
             >
               <Users className="h-3.5 w-3.5" />
@@ -294,30 +318,22 @@ export const DashboardJobCard = ({
           )}
         </div>
         <CardAction>
-          <div className="flex gap-1.5 opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-            {onEdit && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onEdit}
-                className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary hover:scale-110 transition-all duration-200 shadow-sm hover:shadow-md"
-                aria-label="Edit job"
-              >
-                <Edit className="h-4 w-4" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <EllipsisVertical className="h-4 w-4" />
               </Button>
-            )}
-            {onDelete && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onDelete}
-                className="h-9 w-9 rounded-lg text-destructive/70 hover:bg-destructive/10 hover:text-destructive hover:scale-110 transition-all duration-200 shadow-sm hover:shadow-md"
-                aria-label="Delete job"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem>
+              <DropdownMenuItem onClick={onDelete}>Delete</DropdownMenuItem>
+              <DropdownMenuItem onClick={onInterviewManagement}>
+                Interview Management
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </CardAction>
       </CardFooter>
     </Card>

@@ -13,9 +13,137 @@ import {
   JobType,
   Currency,
   Prisma,
+  JobOpening,
 } from "@/lib/generated/prisma/client";
+import { TRPCError } from "@trpc/server";
+import { inngest } from "@/inngest/client";
 
 export const recuiterProcedure = createTRPCRouter({
+  getJobOpening: isRecuiterProcedure
+    .input(
+      z.object({
+        jobOpeningId: z.string().min(1, "Job opening id is required"),
+      })
+    )
+    .query(async ({ input }) => {
+      const { jobOpeningId } = input;
+      const jobOpening = await db.jobOpening.findUnique({
+        where: { id: jobOpeningId },
+      });
+      if (!jobOpening) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Job opening not found",
+        });
+      }
+      return (jobOpening as JobOpening) ?? [];
+    }),
+  generateInterviewQuestions: isRecuiterProcedure
+    .input(
+      z.object({
+        jobOpeningId: z.string().min(1, "Job opening id is required"),
+        duration: z.number().min(1, "Duration is required"),
+        expiresAt: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { jobOpeningId, duration, expiresAt } = input;
+      const expiresAtDate = new Date(
+        expiresAt || Date.now() + 2 * 24 * 60 * 60 * 1000
+      );
+
+      const jobOpening = await db.jobOpening.findUnique({
+        where: {
+          id: jobOpeningId,
+        },
+        select: {
+          requiredSkills: true,
+          title: true,
+          experienceLevel: true,
+          jobType: true,
+          about: true,
+        },
+      });
+
+      if (!jobOpening) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Job opening not found",
+        });
+      }
+      const interviewQuestionAlredyExists = await db.interview.findFirst({
+        where: {
+          jobOpeningId,
+        },
+      });
+      if (interviewQuestionAlredyExists) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Interview questions already exists",
+        });
+      }
+      const interview = await db.interview.create({
+        data: {
+          jobOpeningId,
+          duration: duration * 60,
+          expiresAt: expiresAtDate,
+          questions: [],
+        },
+      });
+
+      // Send event to Inngest with interviewId so it can update the interview
+      await inngest.send({
+        name: "recuiter/generate-interview-question",
+        data: {
+          interviewId: interview.id,
+          jobOpeningId,
+          requiredSkills: jobOpening.requiredSkills as string[],
+          title: jobOpening.title,
+          experienceLevel: jobOpening.experienceLevel as string,
+          jobType: jobOpening.jobType as JobType,
+          about: jobOpening.about,
+          duration: duration * 60,
+          expiresAt: expiresAtDate,
+        },
+      });
+
+      return {
+        id: interview.id,
+        questions: interview.questions,
+      };
+    }),
+  getInterview: isRecuiterProcedure
+    .input(
+      z.object({
+        interviewId: z.string().min(1, "Interview id is required"),
+      })
+    )
+    .query(async ({ input }) => {
+      const { interviewId } = input;
+      const interview = await db.interview.findUnique({
+        where: { id: interviewId },
+      });
+      if (!interview) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Interview not found",
+        });
+      }
+      return interview;
+    }),
+  getInterviews: isRecuiterProcedure
+    .input(
+      z.object({
+        jobOpeningId: z.string().min(1, "Job opening id is required"),
+      })
+    )
+    .query(async ({ input }) => {
+      const { jobOpeningId } = input;
+      const interviews = await db.interview.findMany({
+        where: { jobOpeningId },
+      });
+      return interviews;
+    }),
   getMany: isRecuiterProcedure
     .input(
       z.object({
@@ -90,7 +218,6 @@ export const recuiterProcedure = createTRPCRouter({
         aboutCompany,
         companySize,
         companyWebsite,
-        filteringDescription,
       } = input;
 
       const createdJobOpening = await db.jobOpening.create({
@@ -106,7 +233,6 @@ export const recuiterProcedure = createTRPCRouter({
           aboutCompany,
           companySize,
           companyWebsite,
-          filteringDescription,
           title,
           about,
           department,

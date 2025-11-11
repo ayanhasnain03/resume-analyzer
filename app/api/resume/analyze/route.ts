@@ -1,20 +1,30 @@
-import { inngest } from "@/inngest/client";
 import { NextRequest, NextResponse } from "next/server";
+
+import { inngest } from "@/inngest/client";
 
 export async function POST(req: NextRequest) {
   try {
-    const { file, jobTitle, jobDescription } = await req.json();
+    const { file, jobTitle, jobDescription, userId, jobOpeningId } =
+      await req.json();
+    if (!file || !jobTitle || !jobDescription || !userId || !jobOpeningId) {
+      return NextResponse.json(
+        { success: false, error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
 
-    const result = await inngest.send({
-      name: "user/resume-analyze",
+    await inngest.send({
+      name: "user.resume-analyze",
       data: {
+        userId,
+        jobOpeningId,
         file,
         jobTitle,
         jobDescription,
       },
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
       {

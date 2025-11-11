@@ -8,6 +8,7 @@ import Link from "next/link";
 import { JobOpening as JobOpeningType } from "@/lib/generated/prisma/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardJobCard } from "../components/dashboard-job-card";
+import { useRouter } from "next/navigation";
 
 type JobOpeningWithCount = JobOpeningType & {
   _count: {
@@ -17,6 +18,7 @@ type JobOpeningWithCount = JobOpeningType & {
 
 export const DashboardJobsView = () => {
   const trpc = useTRPC();
+  const router = useRouter();
   const { data } = useSuspenseQuery(trpc.recuiter.getMany.queryOptions({})) as {
     data: { jobs: JobOpeningWithCount[]; total: number };
   };
@@ -55,6 +57,9 @@ export const DashboardJobsView = () => {
             createdAt={job.createdAt}
             onEdit={() => {}}
             onDelete={() => {}}
+            onInterviewManagement={() =>
+              router.push(`/dashboard/jobs/${job.id}/interview-manage`)
+            }
           />
         ))}
       </div>
